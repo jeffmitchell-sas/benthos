@@ -81,12 +81,16 @@ func (p *parallelProc) ProcessBatch(ctx *processor.BatchProcContext, msg message
 	wg.Add(max)
 
 	for i := 0; i < max; i++ {
-		go func() {
-			newUUID := uuid.New()
-			fmt.Printf("thread number %v id: %s", i, newUUID)
-			defer wg.Done()
 
+		newUUID := uuid.New()
+		// fmt.Printf("THREAD NUMBER %v ID: %s\n", i, newUUID)
+		defer wg.Done()
+
+		go func() {
 			for index := range reqChan {
+
+				fmt.Printf("THREAD ID: %v, msg: %v\n", newUUID, resultMsgs[index])
+
 				resMsgs, err := processor.ExecuteAll(ctx.Context(), p.children, resultMsgs[index])
 				if err != nil {
 					return

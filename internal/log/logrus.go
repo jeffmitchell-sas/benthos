@@ -1,11 +1,14 @@
 package log
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
 	"os"
+	"runtime"
 	"strings"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"gopkg.in/natefinch/lumberjack.v2"
@@ -45,6 +48,13 @@ func New(stream io.Writer, fs ifs.FS, config Config) (Modular, error) {
 	}
 
 	logger := logrus.New()
+	// Use JSONFormatter or TextFormatter as the base formatter
+	logger.SetFormatter(&ThreadIDFormatter{Formatter: &logrus.TextFormatter{
+		TimestampFormat: time.RFC3339,
+		FullTimestamp:   true,
+	}})
+
+	logger.Info("This is a log message with thread ID")
 	logger.Out = stream
 
 	switch config.Format {
@@ -168,4 +178,36 @@ func (l *Logger) Debug(format string, v ...any) {
 // Trace prints a trace message to the console.
 func (l *Logger) Trace(format string, v ...any) {
 	l.entry.Tracef(strings.TrimSuffix(format, "\n"), v...)
+}
+
+func getThreadID() int {
+	// This is a simplified version to get the goroutine ID
+	// Note: This is not the actual thread ID
+	var buf [64]byte
+	n := runtime.Stack(buf[:], false)
+	idField := bytes.Fields(buf[:n])[1]
+	var id int
+	fmt.Sscanf(string(idField), "%d", &id)
+	return id
+}
+
+type ThreadIDFormatter struct {
+	Formatter logrus.Formatter
+}
+
+func (f *ThreadIDFormatter) Format(entry *logrus.Entry) ([]byte, error) {
+	// Get thread ID
+	threadID := getThreadID()
+
+	// Format original log entry
+	data, err := f.Formatter.Format(entry)
+	if err != nil {
+		return nil, err
+	}
+
+	// Append thread ID to the log entry
+	var buf bytes.Buffer
+	buf.WriteString(fmt.Sprintf("[Thread-%d] ", threadID))
+	buf.Write(data)
+	return buf.Bytes(), nil
 }

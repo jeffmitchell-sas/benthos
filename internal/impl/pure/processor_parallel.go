@@ -2,12 +2,15 @@ package pure
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/benthosdev/benthos/v4/internal/component/interop"
 	"github.com/benthosdev/benthos/v4/internal/component/processor"
 	"github.com/benthosdev/benthos/v4/internal/message"
 	"github.com/benthosdev/benthos/v4/public/service"
+
+	"github.com/google/uuid"
 )
 
 const (
@@ -79,6 +82,8 @@ func (p *parallelProc) ProcessBatch(ctx *processor.BatchProcContext, msg message
 
 	for i := 0; i < max; i++ {
 		go func() {
+			newUUID := uuid.New()
+			fmt.Printf("thread number %v id: %s", i, newUUID)
 			defer wg.Done()
 
 			for index := range reqChan {
